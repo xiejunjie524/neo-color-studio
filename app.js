@@ -158,8 +158,17 @@ function extractPalette(resetLocks = false) {
   try {
     const count = Number($('#color-count').value);
     const thief = new window.ColorThief();
-    const extracted = thief.getPalette(image, count, quality)?.map(rgbToHex);
-    if (!extracted?.length) throw new Error('No visible pixels');
+    let extracted = thief.getPalette(image, count, quality)?.map(rgbToHex);
+    if (!extracted?.length) {
+      // Color Thief excludes near-white pixels; keep all-white images usable.
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0, 1, 1);
+      const pixel = context.getImageData(0, 0, 1, 1).data;
+      if (!pixel[3]) throw new Error('No visible pixels');
+      extracted = [rgbToHex([...pixel].slice(0, 3))];
+    }
     if (resetLocks) locked = [];
     colors = Array.from({ length: count }, (_, index) => locked[index] && colors[index] ? colors[index] : extracted[index % extracted.length]);
     locked = Array.from({ length: count }, (_, index) => !!locked[index]);
