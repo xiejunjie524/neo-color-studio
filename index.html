@@ -7,10 +7,10 @@
   <meta name="description" content="24 组封面、视频字幕、网页和图表配色方案，实时应用预览与 PNG 成品导出，附图片取色和 WCAG 对比度检查。">
   <title>NEO · 配色工作台</title>
   <link rel="icon" href="favicon.png" type="image/png">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=4">
   <script defer src="lucide.min.js"></script>
   <script defer src="color-thief.umd.js"></script>
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="app.js?v=4"></script>
 </head>
 <body>
   <header class="site-header">
@@ -73,7 +73,7 @@
             </div>
             <div class="control-pair">
               <label>画幅<select id="project-format"><option value="wide">横版 16:9</option><option value="portrait">竖版 3:4</option><option value="square">方形 1:1</option></select></label>
-              <label>照片<span class="photo-picker"><select id="project-photo"><option value="none">纯色</option><option value="city" selected>城市几何</option><option value="garden">花园午后</option><option value="coast">海岸假日</option><option value="mountain">山野之间</option><option id="custom-photo-option" value="custom" hidden>上传的照片</option></select><button id="upload-project-photo" class="icon-button" title="上传背景照片" aria-label="上传背景照片"><i data-lucide="image-plus"></i></button></span></label>
+              <label id="project-photo-control">照片<span class="photo-picker"><select id="project-photo"><option value="none">纯色</option><option value="city" selected>城市几何</option><option value="garden">花园午后</option><option value="coast">海岸假日</option><option value="mountain">山野之间</option><option id="custom-photo-option" value="custom" hidden>上传的照片</option></select><button id="upload-project-photo" class="icon-button" title="上传背景照片" aria-label="上传背景照片"><i data-lucide="image-plus"></i></button></span></label>
             </div>
             <label class="font-control">字号<input id="project-font" type="range" min="30" max="100" value="72"><output id="font-value">72</output></label>
             <div id="project-colors" class="project-colors"></div>

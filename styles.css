@@ -176,6 +176,7 @@ dialog::backdrop { background: #20212466; }
 .preview-controls > label, .control-pair > label { display: flex; flex-direction: column; gap: 7px; font-size: 11px; color: #7c7e85; min-width: 0; margin-bottom: 12px; }
 .preview-controls input:not([type=color]):not([type=range]), .preview-controls select { width: 100%; min-width: 0; font-size: 12px; height: 35px; padding: 0 9px; border: 1px solid #dedfe2; background: white; color: var(--ink); }
 .control-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.control-pair.single-control { grid-template-columns: 1fr; }
 .chart-values { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-bottom: 14px; }
 .chart-values label { display: flex; flex-direction: column; gap: 6px; font-family: Consolas, monospace; font-size: 10px; color: #8d8f96; min-width: 0; }
 .photo-picker { display: flex; gap: 4px; align-items: center; }

@@ -277,6 +277,8 @@ function updateContrast() {
 
 function setView(view) {
   activeView = view;
+  window.scrollTo(0, 0);
+  if (view === 'schemes') $('.application-panel').scrollTop = 0;
   $('#schemes-view').hidden = view !== 'schemes';
   $('#workspace-view').hidden = view !== 'workspace';
   $('#library-view').hidden = view !== 'library';
@@ -487,6 +489,12 @@ function projectState() {
 }
 
 function renderProject(updateControls = false) {
+  const maximumFont = { cover: 100, subtitle: 50, web: 54, chart: 58 }[projectMode];
+  projectFont = Math.min(projectFont, maximumFont);
+  $('#project-font').max = maximumFont;
+  const usesPhoto = projectMode === 'cover' || projectMode === 'subtitle';
+  $('#project-photo-control').hidden = !usesPhoto;
+  $('.control-pair').classList.toggle('single-control', !usesPhoto);
   const canvas = $('#application-canvas');
   canvas.width = 1200;
   canvas.height = projectFormat === 'wide' ? 675 : projectFormat === 'portrait' ? 1600 : 1200;
@@ -543,6 +551,7 @@ function applyScheme(scheme) {
   projectColors = [...scheme.colors];
   projectPhoto = scheme.photo;
   setMode(scheme.category);
+  $('.application-panel').scrollTop = 0;
   renderSchemes();
   if (matchMedia('(max-width: 900px)').matches) $('.application-panel').scrollIntoView({ block: 'start' });
 }
@@ -784,4 +793,5 @@ renderLibrary();
 updateContrast();
 loadImage(samples.garden.file, name, sampleId);
 renderProject(true);
+renderSchemes();
 loadPhotos().then(() => { renderSchemes(); renderProject(); });
