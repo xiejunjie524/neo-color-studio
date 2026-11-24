@@ -1,0 +1,17 @@
+NEO Color Studio
+
+Color Thief 2.6.0
+https://github.com/lokesh/color-thief
+MIT license: color-thief-LICENSE.txt
+
+Lucide icons
+https://lucide.dev
+ISC license: lucide-ISC.txt
+
+Sample photographs: Unsplash
+https://unsplash.com/license
+garden.jpg: https://images.unsplash.com/photo-1490750967868-88aa4486c946
+coast.jpg: https://images.unsplash.com/photo-1518837695005-2083093ee35b
+city.jpg: https://images.unsplash.com/photo-1487958449943-2429e8be8625
+mountain.jpg: https://images.unsplash.com/photo-1500530855697-b586d89ba3ee
+Downloaded as 1200 x 760 JPEG assets. Attribution links appear beside sample images.

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafafa">
+  <meta name="description" content="NEO 配色工作台，从图片提取配色，编辑色板，检查 WCAG 对比度，导出 CSS、JSON 与 PNG。">
+  <title>NEO · 配色工作台</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="lucide.min.js"></script>
+  <script defer src="color-thief.umd.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="NEO 配色工作台首页">
+      <span class="brand-mark">n</span><span class="brand-name">NEO</span><span class="brand-divider"></span><span class="brand-caption">配色工作台</span>
+    </a>
+    <div class="header-right"><span class="domain-label">neo.abc.sd</span><button id="export-top" class="button primary"><i data-lucide="download"></i><span>导出色板</span></button></div>
+  </header>
+  <main>
+    <div class="page-heading">
+      <div><div class="eyebrow">COLOR STUDIO</div><h1>配色工作台<span class="heading-dot"></span></h1></div>
+      <nav class="tabs" aria-label="工作台视图">
+        <button class="tab active" data-view="workspace" aria-current="page"><i data-lucide="pipette"></i><span>图片取色</span></button>
+        <button class="tab" data-view="library"><i data-lucide="bookmark"></i><span>我的色板</span><span id="saved-count" class="count">0</span></button>
+      </nav>
+    </div>
+
+    <section id="workspace-view">
+      <div class="workspace-toolbar">
+        <div class="palette-title"><span class="status-dot"></span><h2 id="palette-name">花园午后</h2><span id="image-size" class="muted"></span></div>
+        <div class="toolbar-actions">
+          <label class="count-select" for="color-count"><span>颜色</span><select id="color-count"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <button id="extract" class="icon-button" title="重新提取配色" aria-label="重新提取配色"><i data-lucide="refresh-cw"></i></button>
+          <button id="upload" class="button secondary"><i data-lucide="image-plus"></i><span>上传图片</span></button>
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" hidden>
+        </div>
+      </div>
+
+      <div class="workbench">
+        <div class="image-column">
+          <div id="image-stage" class="image-stage">
+            <img id="source-image" src="garden.jpg" alt="花园午后的花束" draggable="false">
+            <div class="image-tools"><button id="eyedropper" class="icon-button" title="像素取色" aria-label="像素取色" aria-pressed="false"><i data-lucide="pipette"></i></button></div>
+            <div id="image-loading" class="image-loading" hidden><span class="spinner"></span><span>提取中</span></div>
+          </div>
+          <div class="photo-caption"><span id="image-label">花园午后</span><a id="photo-credit" href="https://images.unsplash.com/photo-1490750967868-88aa4486c946" target="_blank" rel="noopener noreferrer">Unsplash <i data-lucide="arrow-up-right"></i></a></div>
+          <div id="palette-strip" class="palette-strip" aria-label="当前配色"></div>
+        </div>
+        <section class="palette-column" aria-labelledby="palette-heading">
+          <div class="section-heading"><h2 id="palette-heading">当前色板</h2><button id="save" class="icon-button" title="收藏当前色板" aria-label="收藏当前色板"><i data-lucide="bookmark-plus"></i></button></div>
+          <div id="swatch-list" class="swatch-list"></div>
+          <div class="palette-footer"><span id="selected-label">COLOR 01</span><button id="copy-all" class="text-button"><i data-lucide="copy"></i><span>复制全部</span></button></div>
+        </section>
+      </div>
+
+      <div class="secondary-grid">
+        <section class="reference-section" aria-labelledby="reference-heading">
+          <div class="section-heading"><h2 id="reference-heading">照片采样</h2><span class="muted">04 / COLLECTION</span></div>
+          <div class="sample-grid">
+            <button class="sample active" data-sample="garden" aria-pressed="true"><img src="garden.jpg" alt="黄色与粉色花束"><span>花园午后</span><i data-lucide="check"></i></button>
+            <button class="sample" data-sample="coast" aria-pressed="false"><img src="coast.jpg" alt="阳光下的蓝色海岸" loading="lazy"><span>海岸假日</span><i data-lucide="check"></i></button>
+            <button class="sample" data-sample="city" aria-pressed="false"><img src="city.jpg" alt="明亮的现代建筑" loading="lazy"><span>城市几何</span><i data-lucide="check"></i></button>
+            <button class="sample" data-sample="mountain" aria-pressed="false"><img src="mountain.jpg" alt="自然山峰与天空" loading="lazy"><span>山野之间</span><i data-lucide="check"></i></button>
+          </div>
+        </section>
+        <section class="contrast-section" aria-labelledby="contrast-heading">
+          <div class="section-heading"><h2 id="contrast-heading">对比度检查</h2><span class="standard-label">WCAG 2.2</span></div>
+          <div class="contrast-inputs">
+            <label>文字<input id="foreground" type="color" value="#202124" aria-label="文字颜色"></label>
+            <button id="swap-contrast" class="icon-button" title="交换文字与背景颜色" aria-label="交换文字与背景颜色"><i data-lucide="arrow-left-right"></i></button>
+            <label>背景<input id="background" type="color" value="#f6f3ee" aria-label="背景颜色"></label>
+            <div class="contrast-number"><strong id="contrast-ratio">15.0</strong><span>: 1</span></div>
+          </div>
+          <div id="contrast-preview" class="contrast-preview"><span class="preview-type">Aa</span><div><strong>好的颜色，清晰可读。</strong><span>Good color. Clear words.</span></div></div>
+          <div class="contrast-results"><span>普通文字 <b id="normal-result">AAA</b></span><span>大号文字 <b id="large-result">AAA</b></span></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="library-view" hidden>
+      <div class="library-heading"><h2>我的色板</h2><span id="library-total" class="muted">0 组</span></div>
+      <div id="library-empty" class="empty-state"><i data-lucide="bookmark"></i><h3>暂无收藏</h3><button id="back-to-workspace" class="button primary"><i data-lucide="pipette"></i>图片取色</button></div>
+      <div id="library-grid" class="library-grid"></div>
+    </section>
+  </main>
+  <footer><span>NEO <span class="footer-slash">/</span> COLOR STUDIO</span><span>2026</span></footer>
+
+  <dialog id="export-dialog">
+    <div class="dialog-heading"><h2>导出色板</h2><button class="icon-button" data-close="export-dialog" aria-label="关闭导出" title="关闭"><i data-lucide="x"></i></button></div>
+    <label class="field-label" for="export-name">色板名称</label><input id="export-name" class="name-input" maxlength="60" value="花园午后">
+    <div id="export-preview" class="export-preview"></div>
+    <div class="export-options">
+      <button data-format="png"><i data-lucide="image"></i><strong>PNG</strong><span>图片色卡</span><i data-lucide="download"></i></button>
+      <button data-format="css"><i data-lucide="braces"></i><strong>CSS</strong><span>颜色变量</span><i data-lucide="download"></i></button>
+      <button data-format="json"><i data-lucide="file-json"></i><strong>JSON</strong><span>配色数据</span><i data-lucide="download"></i></button>
+    </div>
+  </dialog>
+  <dialog id="delete-dialog">
+    <div class="dialog-heading"><h2>删除这组色板？</h2><button class="icon-button" data-close="delete-dialog" aria-label="取消删除" title="关闭"><i data-lucide="x"></i></button></div>
+    <p id="delete-name"></p><div class="dialog-actions"><button class="button secondary" data-close="delete-dialog">取消</button><button id="confirm-delete" class="button danger"><i data-lucide="trash-2"></i>删除</button></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
