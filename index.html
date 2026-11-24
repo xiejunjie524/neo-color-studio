@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#fafafa">
-  <meta name="description" content="NEO 配色工作台，从图片提取配色，编辑色板，检查 WCAG 对比度，导出 CSS、JSON 与 PNG。">
+  <meta name="description" content="24 组封面、视频字幕、网页和图表配色方案，实时应用预览与 PNG 成品导出，附图片取色和 WCAG 对比度检查。">
   <title>NEO · 配色工作台</title>
   <link rel="icon" href="favicon.png" type="image/png">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
   <script defer src="lucide.min.js"></script>
   <script defer src="color-thief.umd.js"></script>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=2"></script>
 </head>
 <body>
   <header class="site-header">
@@ -23,12 +23,67 @@
     <div class="page-heading">
       <div><div class="eyebrow">COLOR STUDIO</div><h1>配色工作台<span class="heading-dot"></span></h1></div>
       <nav class="tabs" aria-label="工作台视图">
-        <button class="tab active" data-view="workspace" aria-current="page"><i data-lucide="pipette"></i><span>图片取色</span></button>
+        <button class="tab active" data-view="schemes" aria-current="page"><i data-lucide="palette"></i><span>配色方案</span></button>
+        <button class="tab" data-view="workspace"><i data-lucide="pipette"></i><span>图片取色</span></button>
         <button class="tab" data-view="library"><i data-lucide="bookmark"></i><span>我的色板</span><span id="saved-count" class="count">0</span></button>
       </nav>
     </div>
 
-    <section id="workspace-view">
+    <section id="schemes-view">
+      <div class="scheme-toolbar">
+        <div class="scheme-filters">
+          <label>场景<select id="scheme-category"><option value="all">全部场景</option><option value="cover">封面海报</option><option value="subtitle">视频字幕</option><option value="web">网页界面</option><option value="chart">图表数据</option></select></label>
+          <label>底色<select id="scheme-tone"><option value="all">全部</option><option value="light">浅色</option><option value="dark">深色</option></select></label>
+        </div>
+        <div class="scheme-search"><i data-lucide="search"></i><input id="scheme-search" type="search" placeholder="搜索颜色、风格或场景" aria-label="搜索配色方案"><button id="clear-search" class="icon-button" title="清除搜索" aria-label="清除搜索" hidden><i data-lucide="x"></i></button></div>
+      </div>
+      <div class="scheme-layout">
+        <div class="scheme-catalog">
+          <div class="section-heading"><h2>应用配色</h2><span id="scheme-total" class="muted">24 组方案</span></div>
+          <div id="scheme-grid" class="scheme-grid"></div>
+          <div id="scheme-empty" class="empty-state" hidden><i data-lucide="search"></i><h3>没有匹配的配色</h3><button id="reset-filters" class="button secondary"><i data-lucide="rotate-ccw"></i>重置筛选</button></div>
+        </div>
+        <section class="application-panel" aria-labelledby="application-heading">
+          <div class="section-heading"><h2 id="application-heading">应用预览</h2><span id="project-name" class="muted">醒目红白</span></div>
+          <div class="mode-tabs" aria-label="应用场景">
+            <button data-mode="cover" aria-pressed="true" title="封面海报"><i data-lucide="image"></i>封面</button>
+            <button data-mode="subtitle" aria-pressed="false" title="视频字幕"><i data-lucide="captions"></i>字幕</button>
+            <button data-mode="web" aria-pressed="false" title="网页界面"><i data-lucide="panels-top-left"></i>网页</button>
+            <button data-mode="chart" aria-pressed="false" title="图表数据"><i data-lucide="chart-column"></i>图表</button>
+          </div>
+          <canvas id="application-canvas" width="1200" height="675" aria-label="当前配色的应用预览"></canvas>
+          <div class="project-actions">
+            <button id="download-project" class="button primary"><i data-lucide="download"></i>导出作品 PNG</button>
+            <button id="save-project" class="icon-button" title="收藏配色方案" aria-label="收藏配色方案"><i data-lucide="bookmark-plus"></i></button>
+            <button id="reset-project" class="icon-button" title="恢复所选方案" aria-label="恢复所选方案"><i data-lucide="rotate-ccw"></i></button>
+          </div>
+          <span id="project-dimensions" class="muted">1920 × 1080 px</span>
+          <div class="preview-controls">
+            <label>标题<input id="project-title" maxlength="60" value="城市观察"></label>
+            <label>副标题<input id="project-subtitle" maxlength="100" value="镜头里的日常 / WEEKEND JOURNAL"></label>
+            <label id="project-label-control">栏目<input id="project-label" maxlength="24" value="城市 / 生活 / 观察"></label>
+            <div id="chart-data-controls" hidden>
+              <span class="field-label">完成率（%）</span>
+              <div class="chart-values">
+                <label>Q1<input type="number" data-quarter="0" aria-label="Q1 完成率" min="0" max="100" step="0.1" value="24"></label>
+                <label>Q2<input type="number" data-quarter="1" aria-label="Q2 完成率" min="0" max="100" step="0.1" value="46"></label>
+                <label>Q3<input type="number" data-quarter="2" aria-label="Q3 完成率" min="0" max="100" step="0.1" value="68"></label>
+                <label>Q4<input type="number" data-quarter="3" aria-label="Q4 完成率" min="0" max="100" step="0.1" value="87"></label>
+              </div>
+            </div>
+            <div class="control-pair">
+              <label>画幅<select id="project-format"><option value="wide">横版 16:9</option><option value="portrait">竖版 3:4</option><option value="square">方形 1:1</option></select></label>
+              <label>照片<span class="photo-picker"><select id="project-photo"><option value="none">纯色</option><option value="city" selected>城市几何</option><option value="garden">花园午后</option><option value="coast">海岸假日</option><option value="mountain">山野之间</option><option id="custom-photo-option" value="custom" hidden>上传的照片</option></select><button id="upload-project-photo" class="icon-button" title="上传背景照片" aria-label="上传背景照片"><i data-lucide="image-plus"></i></button></span></label>
+            </div>
+            <label class="font-control">字号<input id="project-font" type="range" min="30" max="100" value="72"><output id="font-value">72</output></label>
+            <div id="project-colors" class="project-colors"></div>
+            <div class="project-accessibility"><span>文字 / 背景 <b id="project-grade">AAA</b></span><span id="project-ratio">15.0 : 1</span></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="workspace-view" hidden>
       <div class="workspace-toolbar">
         <div class="palette-title"><span class="status-dot"></span><h2 id="palette-name">花园午后</h2><span id="image-size" class="muted"></span></div>
         <div class="toolbar-actions">
@@ -53,6 +108,7 @@
           <div class="section-heading"><h2 id="palette-heading">当前色板</h2><button id="save" class="icon-button" title="收藏当前色板" aria-label="收藏当前色板"><i data-lucide="bookmark-plus"></i></button></div>
           <div id="swatch-list" class="swatch-list"></div>
           <div class="palette-footer"><span id="selected-label">COLOR 01</span><button id="copy-all" class="text-button"><i data-lucide="copy"></i><span>复制全部</span></button></div>
+          <button id="use-extracted" class="button secondary"><i data-lucide="panels-top-left"></i>应用当前色板</button>
         </section>
       </div>
 
