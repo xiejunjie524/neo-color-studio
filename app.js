@@ -458,9 +458,19 @@ async function exportPalette(format) {
   toast('已导出色板');
 }
 
-function savePalette(palette, paletteName, metadata = {}) {
+function savePalette(palette, paletteName, metadata = {}, updateExisting = false) {
   if (!palette.length) return;
-  if (library.some((item) => item.name === paletteName && item.colors.join() === palette.join())) {
+  const existing = library.findIndex((item) => item.name === paletteName && item.colors.join() === palette.join()
+    && (item.kind === 'scheme') === (metadata.kind === 'scheme'));
+  if (existing !== -1) {
+    if (updateExisting && metadata.kind === 'scheme') {
+      const previous = library;
+      library = library.map((item, index) => index === existing ? { ...item, ...metadata, date: new Date().toISOString() } : item);
+      if (!persist()) library = previous;
+      else toast('已更新收藏方案');
+      renderLibrary();
+      return;
+    }
     toast('这组色板已收藏');
     return;
   }
@@ -741,7 +751,7 @@ $('#download-project').addEventListener('click', () => downloadProject().catch((
 $('#save-project').addEventListener('click', () => savePalette(projectColors, projectName, {
   kind: 'scheme', schemeId: chosenScheme?.id, imageData: projectPhoto === 'custom' ? customPhotoData() : undefined,
   project: { mode: projectMode, title: projectTitle, subtitle: projectSubtitle, photo: projectPhoto, format: projectFormat, fontSize: projectFont, label: projectLabel, values: [...projectValues] },
-}));
+}, true));
 $('#reset-project').addEventListener('click', () => {
   const original = chosenScheme || schemes[0];
   projectMode = original.category;
