@@ -49,6 +49,8 @@ function text(context, value, x, y, size, color, weight = 400, maxWidth) {
 }
 
 function wrappedText(context, value, x, y, maxWidth, maxHeight, size, color, weight = 700, minimum = 12) {
+  if (!value || maxWidth <= 0 || maxHeight <= 0) return 0;
+  minimum = Math.min(minimum, maxHeight / 1.4);
   const segments = typeof Intl.Segmenter === 'function'
     ? [...new Intl.Segmenter('zh-CN', { granularity: 'grapheme' }).segment(value)].map((item) => item.segment)
     : Array.from(value);
@@ -68,6 +70,13 @@ function wrappedText(context, value, x, y, maxWidth, maxHeight, size, color, wei
   }
   context.fillStyle = color;
   context.textBaseline = 'top';
+  const lineLimit = Math.max(1, Math.floor((maxHeight + .001) / (size * 1.4)));
+  if (lines.length > lineLimit) {
+    lines = lines.slice(0, lineLimit);
+    let last = lines.at(-1);
+    while (last && context.measureText(last + '…').width > maxWidth) last = Array.from(last).slice(0, -1).join('');
+    lines[lines.length - 1] = last + '…';
+  }
   lines.forEach((line, index) => context.fillText(line, x, y + index * size * 1.4));
   return lines.length * size * 1.4;
 }
@@ -82,16 +91,17 @@ function photo(context, id, x, y, width, height) {
   return true;
 }
 
-export function renderApplication(canvas, project) {
+export function renderApplication(canvas, project, dimensions = canvas) {
   const { mode, colors: [bg, ink, primary, secondary, detail], title, subtitle, photo: photoId = 'none', fontSize = 72, label = '城市 / 生活 / 观察', values = [24, 46, 68, 87] } = project;
   const context = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
+  const { width, height } = dimensions;
   const portrait = height > width;
-  const unit = width / 1200;
+  const unit = Math.min(width / 1200, height / 675);
   const pad = 64 * unit;
   const contentWidth = width - pad * 2;
   const line = 2 * unit;
+  context.save();
+  context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
   context.clearRect(0, 0, width, height);
   fill(context, bg, 0, 0, width, height);
 
@@ -101,9 +111,10 @@ export function renderApplication(canvas, project) {
     const hasPhoto = photoCache.has(photoId);
     const top = pad + 76 * unit;
     const textWidth = portrait || !hasPhoto ? contentWidth : contentWidth * .57;
-    const titleHeight = wrappedText(context, title, pad, top, textWidth, portrait ? height * .28 : height * .45, fontSize * unit * (portrait ? 1.15 : 1.3), ink);
+    const subtitleBottom = hasPhoto ? (portrait ? height * .49 - 24 * unit : height - pad - 66 * unit) : height * .71 - 24 * unit;
+    const titleSpace = Math.min(portrait ? height * .28 : height * .45, subtitleBottom - top - 104 * unit);
+    const titleHeight = wrappedText(context, title, pad, top, textWidth, titleSpace, fontSize * unit * (portrait ? 1.15 : 1.3), ink, 700, 12 * unit);
     const subtitleTop = top + titleHeight + 24 * unit;
-    const subtitleBottom = portrait && hasPhoto ? height * .49 - 24 * unit : height - pad - 66 * unit;
     wrappedText(context, subtitle, pad, subtitleTop, textWidth, subtitleBottom - subtitleTop, 22 * unit, ink, 400, 12 * unit);
     if (hasPhoto) {
       if (portrait) photo(context, photoId, pad, height * .49, contentWidth, height * .38);
@@ -179,5 +190,6 @@ export function renderApplication(canvas, project) {
       text(context, `Q${index + 1}`, x + barWidth * .25, bottom + 20 * unit, 20 * unit, ink);
     });
   }
+  context.restore();
   return canvas;
 }

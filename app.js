@@ -1,6 +1,7 @@
 import { normalizeHex, hexToRgb, rgbToHex, readableText, contrastRatio, contrastGrade, cssPalette, luminance } from './color.js';
 import { schemes, categories, roleNames, defaultCopy, filterSchemes } from './schemes.js';
-import { renderApplication, loadPhotos, setCustomPhoto, customPhotoData } from './application.js';
+import { renderApplication, loadPhotos, setCustomPhoto, customPhotoData } from './application.js?v=5';
+import { projectFormats, dimensionError, projectDimensions } from './formats.js';
 
 const $ = (selector) => document.querySelector(selector);
 const storageKey = 'neo-palettes-v1';
@@ -31,6 +32,9 @@ let projectTitle = defaultCopy[projectMode].title;
 let projectSubtitle = defaultCopy[projectMode].subtitle;
 let projectPhoto = chosenScheme.photo;
 let projectFormat = 'wide';
+let projectCustomSize = { width: 1920, height: 1080 };
+let projectRatioLocked = false;
+let projectLockedRatio = 16 / 9;
 let projectFont = 72;
 let projectLabel = '城市 / 生活 / 观察';
 let projectValues = [24, 46, 68, 87];
@@ -325,7 +329,12 @@ function renderLibrary() {
           projectPhoto = 'custom';
           $('#custom-photo-option').hidden = false;
         }
-        projectFormat = ['wide', 'portrait', 'square'].includes(saved.format) ? saved.format : 'wide';
+        projectCustomSize = saved.size && !dimensionError(saved.size.width, saved.size.height)
+          ? { width: saved.size.width, height: saved.size.height } : { width: 1920, height: 1080 };
+        projectFormat = Object.hasOwn(projectFormats, saved.format) || (saved.format === 'custom' && saved.size && !dimensionError(saved.size.width, saved.size.height)) ? saved.format : 'wide';
+        projectRatioLocked = saved.ratioLocked === true;
+        const dimensions = projectDimensions(projectFormat, projectCustomSize);
+        projectLockedRatio = dimensions.width / dimensions.height;
         projectFont = Number.isFinite(saved.fontSize) ? Math.max(30, Math.min(100, saved.fontSize)) : 72;
         projectLabel = typeof saved.label === 'string' ? saved.label.slice(0, 24) : '城市 / 生活 / 观察';
         projectValues = Array.isArray(saved.values) && saved.values.length === 4 && saved.values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100) ? [...saved.values] : [24, 46, 68, 87];
@@ -488,6 +497,51 @@ function projectState() {
   return { mode: projectMode, colors: projectColors, title: projectTitle, subtitle: projectSubtitle, photo: projectPhoto, fontSize: projectFont, label: projectLabel, values: projectValues };
 }
 
+function showDimensionError(message) {
+  $('#size-error').textContent = message;
+  $('#size-error').hidden = !message;
+  for (const axis of ['width', 'height']) $('#project-' + axis).setAttribute('aria-invalid', String(!!message));
+  $('#download-project').disabled = !!message;
+  $('#save-project').disabled = !!message;
+  $('#swap-project-size').disabled = !!message;
+}
+
+function renderRatioControl() {
+  const lock = $('#lock-project-ratio');
+  lock.setAttribute('aria-pressed', String(projectRatioLocked));
+  lock.title = projectRatioLocked ? '解锁宽高比例' : '锁定宽高比例';
+  lock.setAttribute('aria-label', lock.title);
+  lock.innerHTML = `<i data-lucide="${projectRatioLocked ? 'lock-keyhole' : 'lock-keyhole-open'}"></i>`;
+  icons();
+}
+
+function syncSizeControls() {
+  const { width, height } = projectDimensions(projectFormat, projectCustomSize);
+  $('#project-format').value = projectFormat;
+  $('#project-width').value = width;
+  $('#project-height').value = height;
+  renderRatioControl();
+  showDimensionError('');
+}
+
+function updateCustomSize(axis) {
+  const edited = $('#project-' + axis);
+  const otherAxis = axis === 'width' ? 'height' : 'width';
+  if (projectRatioLocked && Number.isFinite(edited.valueAsNumber) && edited.valueAsNumber > 0) {
+    $('#project-' + otherAxis).value = Math.round(axis === 'width' ? edited.valueAsNumber / projectLockedRatio : edited.valueAsNumber * projectLockedRatio);
+  }
+  projectFormat = 'custom';
+  $('#project-format').value = projectFormat;
+  const width = $('#project-width').valueAsNumber;
+  const height = $('#project-height').valueAsNumber;
+  const error = dimensionError(width, height);
+  showDimensionError(error);
+  if (error) return;
+  projectCustomSize = { width, height };
+  if (!projectRatioLocked) projectLockedRatio = width / height;
+  renderProject();
+}
+
 function renderProject(updateControls = false) {
   const maximumFont = { cover: 100, subtitle: 50, web: 54, chart: 58 }[projectMode];
   projectFont = Math.min(projectFont, maximumFont);
@@ -496,12 +550,14 @@ function renderProject(updateControls = false) {
   $('#project-photo-control').hidden = !usesPhoto;
   $('.control-pair').classList.toggle('single-control', !usesPhoto);
   const canvas = $('#application-canvas');
-  canvas.width = 1200;
-  canvas.height = projectFormat === 'wide' ? 675 : projectFormat === 'portrait' ? 1600 : 1200;
-  canvas.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
-  renderApplication(canvas, projectState());
+  const dimensions = projectDimensions(projectFormat, projectCustomSize);
+  const previewScale = Math.min(1, 1200 / Math.max(dimensions.width, dimensions.height));
+  canvas.width = Math.round(dimensions.width * previewScale);
+  canvas.height = Math.round(dimensions.height * previewScale);
+  canvas.style.aspectRatio = `${dimensions.width} / ${dimensions.height}`;
+  renderApplication(canvas, projectState(), dimensions);
   $('#project-name').textContent = projectName;
-  $('#project-dimensions').textContent = projectFormat === 'wide' ? '1920 × 1080 px' : projectFormat === 'portrait' ? '1080 × 1440 px' : '1080 × 1080 px';
+  $('#project-dimensions').textContent = `${dimensions.width} × ${dimensions.height} px`;
   const ratio = contrastRatio(projectColors[0], projectColors[1]);
   $('#project-ratio').textContent = ratio.toFixed(2) + ' : 1';
   $('#project-grade').textContent = contrastGrade(ratio);
@@ -515,7 +571,7 @@ function renderProject(updateControls = false) {
   $('#project-label').value = projectLabel;
   document.querySelectorAll('[data-quarter]').forEach((input) => { input.value = projectValues[Number(input.dataset.quarter)]; });
   $('#project-photo').value = projectPhoto;
-  $('#project-format').value = projectFormat;
+  syncSizeControls();
   $('#project-font').value = projectFont;
   $('#font-value').value = projectFont;
   $('#project-colors').replaceChildren(...projectColors.map((hex, index) => {
@@ -627,10 +683,11 @@ function renderSchemes() {
 
 async function downloadProject() {
   const snapshot = { ...projectState(), colors: [...projectColors], values: [...projectValues] };
-  const filename = `${safeFilename(snapshot.title || projectName)}-${snapshot.mode}.png`;
   const canvas = document.createElement('canvas');
-  canvas.width = projectFormat === 'wide' ? 1920 : 1080;
-  canvas.height = projectFormat === 'wide' ? 1080 : projectFormat === 'portrait' ? 1440 : 1080;
+  const { width, height } = projectDimensions(projectFormat, projectCustomSize);
+  const filename = `${safeFilename(snapshot.title || projectName)}-${width}x${height}-${snapshot.mode}.png`;
+  canvas.width = width;
+  canvas.height = height;
   renderApplication(canvas, snapshot);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   if (!blob) { toast('作品导出失败'); return; }
@@ -750,7 +807,30 @@ document.querySelectorAll('[data-quarter]').forEach((input) => input.addEventLis
   renderProject();
 }));
 $('#project-photo').addEventListener('change', (event) => { projectPhoto = event.target.value; renderProject(); });
-$('#project-format').addEventListener('change', (event) => { projectFormat = event.target.value; renderProject(); });
+$('#project-format').replaceChildren(...Object.entries(projectFormats).map(([id, format]) => new Option(`${format.label} · ${format.width} × ${format.height}`, id)), new Option('自定义尺寸', 'custom'));
+$('#project-format').addEventListener('change', (event) => {
+  const dimensions = projectDimensions(projectFormat, projectCustomSize);
+  projectFormat = event.target.value;
+  if (projectFormat === 'custom') projectCustomSize = { width: dimensions.width, height: dimensions.height };
+  const next = projectDimensions(projectFormat, projectCustomSize);
+  projectLockedRatio = next.width / next.height;
+  renderProject(true);
+});
+for (const axis of ['width', 'height']) $('#project-' + axis).addEventListener('input', () => updateCustomSize(axis));
+$('#lock-project-ratio').addEventListener('click', () => {
+  projectRatioLocked = !projectRatioLocked;
+  const width = $('#project-width').valueAsNumber;
+  const height = $('#project-height').valueAsNumber;
+  if (!dimensionError(width, height)) projectLockedRatio = width / height;
+  renderRatioControl();
+});
+$('#swap-project-size').addEventListener('click', () => {
+  const { width, height } = projectDimensions(projectFormat, projectCustomSize);
+  projectCustomSize = { width: height, height: width };
+  projectFormat = Object.keys(projectFormats).find((id) => projectFormats[id].width === height && projectFormats[id].height === width) || 'custom';
+  projectLockedRatio = height / width;
+  renderProject(true);
+});
 $('#project-font').addEventListener('input', (event) => {
   projectFont = Number(event.target.value);
   $('#font-value').value = projectFont;
@@ -759,7 +839,7 @@ $('#project-font').addEventListener('input', (event) => {
 $('#download-project').addEventListener('click', () => downloadProject().catch(() => toast('作品导出失败')));
 $('#save-project').addEventListener('click', () => savePalette(projectColors, projectName, {
   kind: 'scheme', schemeId: chosenScheme?.id, imageData: projectPhoto === 'custom' ? customPhotoData() : undefined,
-  project: { mode: projectMode, title: projectTitle, subtitle: projectSubtitle, photo: projectPhoto, format: projectFormat, fontSize: projectFont, label: projectLabel, values: [...projectValues] },
+  project: { mode: projectMode, title: projectTitle, subtitle: projectSubtitle, photo: projectPhoto, format: projectFormat, size: { ...projectDimensions(projectFormat, projectCustomSize) }, ratioLocked: projectRatioLocked, fontSize: projectFont, label: projectLabel, values: [...projectValues] },
 }, true));
 $('#reset-project').addEventListener('click', () => {
   const original = chosenScheme || schemes[0];
@@ -767,6 +847,9 @@ $('#reset-project').addEventListener('click', () => {
   projectTitle = defaultCopy[projectMode].title;
   projectSubtitle = defaultCopy[projectMode].subtitle;
   projectFormat = 'wide';
+  projectCustomSize = { width: 1920, height: 1080 };
+  projectRatioLocked = false;
+  projectLockedRatio = 16 / 9;
   projectFont = 72;
   projectLabel = '城市 / 生活 / 观察';
   projectValues = [24, 46, 68, 87];
